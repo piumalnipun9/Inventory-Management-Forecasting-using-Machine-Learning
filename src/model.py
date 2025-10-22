@@ -3,10 +3,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
+import datetime as dt
 
 
 @dataclass
@@ -64,6 +65,24 @@ def forecast_per_product(
     return results
 
 
+def _compute_next_order_date(
+    current_stock: float,
+    reorder_level: float,
+    lead_time: int,
+    future_df: pd.DataFrame,
+) -> Optional[dt.date]:
+    today = dt.date.today()
+    fut = future_df[["ds", "yhat"]].copy().reset_index(drop=True)
+    fut["cum"] = fut["yhat"].clip(lower=0).cumsum()
+    mask = (current_stock - fut["cum"]) <= reorder_level
+    if not mask.any():
+        return None
+    first_idx = int(np.argmax(mask.values))
+    hit_date = pd.to_datetime(fut.loc[first_idx, "ds"]).date()
+    order_date = hit_date - dt.timedelta(days=int(lead_time))
+    return max(today, order_date)
+
+
 def suggest_reorder(
     inventory: pd.DataFrame,
     forecasts: List[ForecastResult],
@@ -80,9 +99,37 @@ def suggest_reorder(
         lead_time = max(int(row.get("lead_time", 7)), 1)
         current_stock = float(row.get("current_stock", 0))
         reorder_level = float(row.get("reorder_level", 0))
-        demand_during_lead = forecast.total_demand_30 * (lead_time / horizon_days)
+        # Future horizon window (assume tail is future)
+        fut = forecast.forecast_df.tail(horizon_days)
+        demand_during_lead = float(fut.head(lead_time)["yhat"].clip(lower=0).sum())
+
+        # Perishable logic: limit effective demand by time until expiration
+        expiration_date = row.get("expiration_date", None)
+        sale_window_days: Optional[int] = None
+        if pd.notna(expiration_date):
+            try:
+                exp = expiration_date if isinstance(expiration_date, dt.date) else pd.to_datetime(expiration_date).date()
+                sale_window_days = max(0, (exp - dt.date.today()).days)
+            except Exception:
+                sale_window_days = None
+        if sale_window_days is not None:
+            effective_days = max(0, min(lead_time, sale_window_days))
+            demand_during_lead = float(fut.head(effective_days)["yhat"].clip(lower=0).sum())
+
         reorder_qty = max(0, int(round(demand_during_lead * safety_factor - current_stock)))
         needs_reorder = (current_stock - demand_during_lead) < reorder_level
+
+        next_order_date = _compute_next_order_date(
+            current_stock=current_stock,
+            reorder_level=reorder_level,
+            lead_time=lead_time,
+            future_df=fut,
+        )
+
+        waste_estimate = None
+        if sale_window_days and sale_window_days > 0:
+            demand_until_exp = float(fut.head(sale_window_days)["yhat"].clip(lower=0).sum())
+            waste_estimate = max(0.0, current_stock - demand_until_exp)
         rows.append(
             {
                 "product_id": pid,
@@ -92,6 +139,8 @@ def suggest_reorder(
                 "reorder_level": reorder_level,
                 "recommended_reorder_qty": reorder_qty,
                 "needs_reorder": bool(needs_reorder),
+                "next_order_date": next_order_date,
+                "waste_estimate": waste_estimate,
             }
         )
     return pd.DataFrame(rows)

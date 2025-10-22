@@ -46,6 +46,30 @@ This repository delivers an end-to-end pipeline that ingests inventory transacti
 2. Place the dataset under `/kaggle/input/...` (or set `USE_SYNTHETIC=True` inside `notebooks/kaggle_run.ipynb`).
 3. Run notebook cells sequentially to regenerate forecasts and export visuals for Canva.
 
+### Using your grocery CSV
+
+If you have a CSV like `Grocery_Inventory_new_v1.csv` with columns:
+
+`Product_Name, Catagory (or Category), Supplier_Name, Warehouse_Location, Status, Product_ID, Supplier_ID, Date_Received, Last_Order_Date, Expiration_Date, Stock_Quantity, Reorder_Level, Reorder_Quantity, Unit_Price, Sales_Volume, Inventory_Turnover_Rate, percentage`
+
+Convert it to the internal format with:
+
+1. Locally
+
+   - `python scripts/convert_grocery_csv.py --input Grocery_Inventory_new_v1.csv --out-dir data`
+   - Then run `python scripts/train_and_update.py --data-dir data --output-dir outputs`
+
+2. On Kaggle
+   - Upload the CSV to your working directory and run in the notebook:
+     ```python
+     from pathlib import Path
+     from src.adapters.grocery_csv_adapter import convert_grocery_csv_to_internal
+     convert_grocery_csv_to_internal(Path('/kaggle/working/Grocery_Inventory_new_v1.csv'), Path('data'), default_lead_time=7)
+     ```
+   - Set `DATA_DIR = Path('data')` and execute the pipeline cells.
+
+Perishables: If `Expiration_Date` exists, the pipeline uses it to avoid over-ordering and estimates potential waste. The output `reorder_recommendations.csv` includes `next_order_date` and `waste_estimate` columns.
+
 ### Optional: auto-sync with GitHub Actions
 
 The workflow in `.github/workflows/kaggle-sync.yml` can publish the repository to a Kaggle Dataset whenever `main` changes:

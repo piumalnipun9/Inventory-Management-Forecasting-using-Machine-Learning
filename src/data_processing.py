@@ -34,6 +34,12 @@ def load_products(path: Path) -> pd.DataFrame:
     df["reorder_level"] = df["reorder_level"].fillna(df["reorder_level"].median()).astype(int)
     df["initial_stock"] = df["initial_stock"].fillna(df["initial_stock"].median()).astype(int)
     df["unit_cost"] = df["unit_cost"].fillna(df["unit_cost"].median()).astype(float)
+    # Optional perishable field: expiration_date
+    if "expiration_date" in df.columns:
+        df["expiration_date"] = pd.to_datetime(df["expiration_date"], errors="coerce").dt.date
+    # Optional current_stock (preferred if present)
+    if "current_stock" in df.columns:
+        df["current_stock"] = pd.to_numeric(df["current_stock"], errors="coerce").fillna(0).astype(int)
     return df
 
 
@@ -86,8 +92,12 @@ def compute_current_stock(
     totals = totals.rename(columns={"sales": "total_sales_to_date"})
     merged = products_df.merge(totals, on="product_id", how="left")
     merged["total_sales_to_date"] = merged["total_sales_to_date"].fillna(0)
-    merged["current_stock"] = merged["initial_stock"] - merged["total_sales_to_date"]
-    merged["current_stock"] = merged["current_stock"].clip(lower=0)
+    if "current_stock" in merged.columns:
+        # Trust provided current_stock when present
+        merged["current_stock"] = pd.to_numeric(merged["current_stock"], errors="coerce").fillna(0)
+    else:
+        merged["current_stock"] = merged["initial_stock"] - merged["total_sales_to_date"]
+    merged["current_stock"] = merged["current_stock"].clip(lower=0).astype(int)
     return merged
 
 
