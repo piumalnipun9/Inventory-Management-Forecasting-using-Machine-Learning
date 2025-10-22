@@ -50,6 +50,29 @@ jobs:
           cp README.md kaggle/package/README.md
           cp kaggle/dataset-metadata.json kaggle/package/dataset-metadata.json
 
+      - name: Determine dataset id
+        id: dataset
+        run: |
+          DATASET_ID=$(python -c "import json; meta=json.load(open('kaggle/package/dataset-metadata.json')); print(meta.get('id',''))")
+          echo "DATASET_ID=$DATASET_ID" >> $GITHUB_ENV
+          echo "dataset_id=$DATASET_ID" >> $GITHUB_OUTPUT
+          echo "Using Kaggle dataset id: $DATASET_ID"
+
+      - name: Show Kaggle identity
+        env:
+          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+        run: "echo 'Kaggle user: ' $KAGGLE_USERNAME"
+
+      - name: Create dataset if missing
+        run: |
+          set -e
+          if kaggle datasets files "$DATASET_ID" >/dev/null 2>&1; then
+            echo "Dataset exists: $DATASET_ID"
+          else
+            echo "Dataset not found. Attempting to create: $DATASET_ID"
+            kaggle datasets create -p kaggle/package -q
+          fi
+
       - name: Upload new dataset version
         run: |
-          kaggle datasets version -p kaggle/package -m "Auto update from GitHub Actions" --dir-mode zip
+          kaggle datasets version -p kaggle/package -m "Auto update from GitHub Actions" --dir-mode zip -q
