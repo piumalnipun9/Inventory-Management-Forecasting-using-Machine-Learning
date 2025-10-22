@@ -50,6 +50,18 @@ jobs:
           cp README.md kaggle/package/README.md
           cp kaggle/dataset-metadata.json kaggle/package/dataset-metadata.json
 
+      - name: Normalize dataset id (force ownership)
+        env:
+          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          set -e
+          REPO_SLUG=$(echo "${GITHUB_REPOSITORY##*/}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g')
+          DATASET_ID="$KAGGLE_USERNAME/$REPO_SLUG"
+          echo "Will use dataset id: $DATASET_ID"
+          python -c "import json,os; p='kaggle/package/dataset-metadata.json'; m=json.load(open(p)); m['id']=os.environ['DATASET_ID']; m.setdefault('title','Inventory Management Forecasting'); json.dump(m, open(p,'w'))"
+          echo "DATASET_ID=$DATASET_ID" >> $GITHUB_ENV
+
       - name: Determine dataset id
         id: dataset
         run: |
