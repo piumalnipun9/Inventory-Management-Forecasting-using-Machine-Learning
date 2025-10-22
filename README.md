@@ -46,6 +46,19 @@ This repository delivers an end-to-end pipeline that ingests inventory transacti
 2. Place the dataset under `/kaggle/input/...` (or set `USE_SYNTHETIC=True` inside `notebooks/kaggle_run.ipynb`).
 3. Run notebook cells sequentially to regenerate forecasts and export visuals for Canva.
 
+### Optional: auto-sync with GitHub Actions
+
+The workflow in `.github/workflows/kaggle-sync.yml` can publish the repository to a Kaggle Dataset whenever `main` changes:
+
+1. Create a Kaggle API token (Account → Create New API Token) and add the values as GitHub repository secrets `KAGGLE_USERNAME` and `KAGGLE_KEY`.
+2. Update `kaggle/dataset-metadata.json` with the dataset `id` you own (format `username/dataset-name`).
+3. Ensure the dataset already exists on Kaggle (create it once manually, uploading the same metadata file). After that, every push to `main` will run the action and call `kaggle datasets version ...` to upload a fresh zip containing `src/`, `scripts/`, `notebooks/`, `docs/`, and the README.
+
+Limitations:
+
+- Kaggle Notebooks cannot be auto-run from GitHub; the action only updates the dataset package.
+- If the action fails, check the workflow logs for Kaggle CLI errors (often due to missing secrets or wrong dataset id).
+
 ## Outputs
 
 - `abc_classification.csv` – ABC tagging with revenue contribution.

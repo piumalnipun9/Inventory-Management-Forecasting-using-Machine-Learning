@@ -1,0 +1,11 @@
+{
+  "title": "Inventory Management Forecasting",
+  "id": "piumalnipun9/inventory-management-forecasting",
+  "licenses": [
+    {
+      "name": "CC0-1.0"
+    }
+  ],
+  "subtitle": "Automated pipeline output exported from GitHub Actions",
+  "description": "This dataset is maintained automatically from the GitHub repository Inventory-Management-Forecasting-using-Machine-Learning. It contains the source code, notebooks, and documentation needed to run the inventory analytics and forecasting pipeline on Kaggle."
+}
