@@ -40,6 +40,17 @@ This repository delivers an end-to-end pipeline that ingests inventory transacti
 3. `python scripts/train_and_update.py --generate-synthetic`
 4. Inspect outputs in `outputs/` (plots and CSV reports).
 
+## Run on Google Colab (edit in VS Code, execute on Colab)
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/piumalnipun9/Inventory-Management-Forecasting-using-Machine-Learning/blob/main/notebooks/colab_run.ipynb)
+
+- Edit your code locally in VS Code and push to GitHub when ready.
+- Open the notebook above in Colab and use the "Pull Latest Code" cell to sync the runtime with your latest commits.
+- You can upload `Grocery_Inventory_new_v1.csv` directly in Colab or mount Drive; the notebook includes robust loading/cleaning and then runs the conversion + pipeline.
+- Advanced: The notebook can start a secure, temporary Jupyter server in Colab and print a public URI; in VS Code, use "Jupyter: Specify Jupyter Server" to attach your local notebook to Colab’s kernel.
+
+This gives a smooth loop: edit in VS Code → push → pull in Colab → run heavy cells on GPU/TPU while keeping your files local.
+
 ## Kaggle workflow
 
 1. Upload this repository (or copy key files) into a Kaggle Notebook.
